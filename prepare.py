@@ -88,8 +88,8 @@ def aac_prep(intakes, outcomes):
         else:
             return False
 
-        df['breed_mixed'] = df.breed.apply(lambda row: check_mixed(row))
-        df['breed'] = df.breed.str.replace(' Mix', '')
+    df['breed_mixed'] = df.breed.apply(lambda row: check_mixed(row))
+    df['breed'] = df.breed.str.replace(' Mix', '')
 
     # split the breed description into multiple columns when there is more than one listed
     # then drop the original breed column
@@ -157,5 +157,30 @@ def aac_prep(intakes, outcomes):
     # convert the date & time of the intake into a pandas datetime type
     
     df['datetime_intake'] = pd.to_datetime(df.datetime_intake)
+    
+    return df
 
+def aac_get_dogs(df):
+    df = df[df.animal_type == 'Dog']
+
+    return df
+
+def aac_prep_for_modeling(df):
+    # drop columns not used for modeling at this time
+    df = df.drop(columns=['datetime_intake', 'found_location', 'name', 'animal_id', 'breed_2', 'breed_3', 'color_2', 'name'])
+    # drop rows in order to focus on most common outcome types
+    df = df[df.outcome_type.isin(['Adoption', 'Transfer', 'Return to Owner'])]
+    # columns to hot code
+    categorical_columns = ['fixed', 'breed_mixed', 'intake_type', 'intake_condition', 'animal_type', 'month_intake', 'sex', 'breed_1', 'color_1']
+    # hot coding dummy variables
+    for col in categorical_columns:
+        dummy_df = pd.get_dummies(df[col],
+                                  prefix=df[col].name,
+                                  drop_first=True,
+                                  dummy_na=False)
+        df = pd.concat([df, dummy_df], axis=1)
+        # drop original column
+        df = df.drop(columns=col)
+    # turn age_intake timedelta into float
+    df['age_intake'] = df.age_intake / pd.Timedelta(days=1)
     return df
