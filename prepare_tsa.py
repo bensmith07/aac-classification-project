@@ -15,25 +15,6 @@ def aac_prep(intakes, outcomes):
     for col in cols:
         intakes = intakes.rename(columns={col: col+'_intake'})
         outcomes = outcomes.rename(columns={col: col+'_outcome'})
-        
-    
-    # drop animals that have more than one entry (animals that were taken in on more than one occasion) 
-    # (we should remove this step in later analysis)
-    
-    intakes_duplicated = intakes[intakes.animal_id.duplicated(keep=False)].sort_values('animal_id')
-    outcomes_duplicated = outcomes[outcomes.animal_id.duplicated(keep=False)].sort_values('animal_id')
-    
-    intakes = intakes.loc[~ intakes.animal_id.isin(intakes_duplicated.animal_id)]
-    outcomes = outcomes.loc[~ outcomes.animal_id.isin(outcomes_duplicated.animal_id)]
-    
-    
-    # drop outcomes that don't have a corresponding intake, and vis-versa
-    
-    outcomes_without_intake = outcomes.loc[~ outcomes.animal_id.isin(intakes.animal_id)]
-    outcomes = outcomes.loc[~ outcomes.animal_id.isin(outcomes_without_intake.animal_id)]
-    
-    intakes_without_outcomes = intakes.loc[~ intakes.animal_id.isin(outcomes.animal_id)]
-    intakes = intakes.loc[~ intakes.animal_id.isin(intakes_without_outcomes.animal_id)]
     
     
     # join the dataframes
@@ -43,7 +24,7 @@ def aac_prep(intakes, outcomes):
     
     # drop variables from the original outcomes table (since by definition, they're not drivers of outcome)
     
-    columns = ['datetime_outcome', 'monthyear_outcome', 'date_of_birth', 'outcome_subtype', 'animal_type_outcome', 'sex_upon_outcome', 'age_upon_outcome', 'breed_outcome', 'color_outcome', 'name_outcome']
+    columns = ['monthyear_outcome', 'date_of_birth', 'outcome_subtype', 'animal_type_outcome', 'sex_upon_outcome', 'age_upon_outcome', 'breed_outcome', 'color_outcome', 'name_outcome']
     df = df.drop(columns=columns)
     
     
@@ -159,30 +140,8 @@ def aac_prep(intakes, outcomes):
     df['datetime_intake'] = pd.to_datetime(df.datetime_intake)
 
     # drop columns not used for modeling at this time
-    df = df.drop(columns=['datetime_intake', 'found_location', 'name', 'animal_id', 'breed_2', 'breed_3', 'color_2'])
+    df = df.drop(columns=['found_location', 'name', 'animal_id', 'breed_2', 'breed_3', 'color_2'])
     # filter for only the most common outcome types
     df = df[df.outcome_type.isin(['Adoption', 'Transfer', 'Return to Owner'])]
     
-    return df
-
-def aac_get_dogs(df):
-    df = df[df.animal_type == 'Dog']
-
-    return df
-
-def aac_prep_for_modeling(df):
-
-    # columns to hot code
-    categorical_columns = ['fixed', 'breed_mixed', 'intake_type', 'intake_condition', 'animal_type', 'month_intake', 'sex', 'breed_1', 'color_1']
-    # hot coding dummy variables
-    for col in categorical_columns:
-        dummy_df = pd.get_dummies(df[col],
-                                  prefix=df[col].name,
-                                  drop_first=True,
-                                  dummy_na=False)
-        df = pd.concat([df, dummy_df], axis=1)
-        # drop original column
-        df = df.drop(columns=col)
-    # turn age_intake timedelta into float
-    df['age_intake'] = df.age_intake / pd.Timedelta(days=1)
     return df
