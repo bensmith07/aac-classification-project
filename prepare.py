@@ -1,5 +1,9 @@
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.cluster import KMeans
+random_state = 42
 
 def aac_prep(intakes, outcomes):
 
@@ -15,16 +19,6 @@ def aac_prep(intakes, outcomes):
     for col in cols:
         intakes = intakes.rename(columns={col: col+'_intake'})
         outcomes = outcomes.rename(columns={col: col+'_outcome'})
-        
-    
-    # drop animals that have more than one entry (animals that were taken in on more than one occasion) 
-    # (we should remove this step in later analysis)
-    
-    intakes_duplicated = intakes[intakes.animal_id.duplicated(keep=False)].sort_values('animal_id')
-    outcomes_duplicated = outcomes[outcomes.animal_id.duplicated(keep=False)].sort_values('animal_id')
-    
-    intakes = intakes.loc[~ intakes.animal_id.isin(intakes_duplicated.animal_id)]
-    outcomes = outcomes.loc[~ outcomes.animal_id.isin(outcomes_duplicated.animal_id)]
     
     
     # drop outcomes that don't have a corresponding intake, and vis-versa
@@ -35,11 +29,25 @@ def aac_prep(intakes, outcomes):
     intakes_without_outcomes = intakes.loc[~ intakes.animal_id.isin(outcomes.animal_id)]
     intakes = intakes.loc[~ intakes.animal_id.isin(intakes_without_outcomes.animal_id)]
     
+    # add information about how many times the animal has been seen previously
+    # and a unique identifier for each individual stay at the shelter
+
+    intakes['datetime_intake'] = pd.to_datetime(intakes.datetime_intake)
+    intakes = intakes.sort_values('datetime_intake', ignore_index=True)
+
+    intakes['n_previous_stays'] = intakes.groupby('animal_id').cumcount()
+    intakes['stay_id'] = intakes.animal_id + '_' + intakes.n_previous_stays.astype(str)
+
+    outcomes['datetime_outcome'] = pd.to_datetime(outcomes.datetime_outcome)
+    outcomes = outcomes.sort_values('datetime_outcome', ignore_index=True)
+
+    outcomes['n_previous_stays'] = outcomes.groupby('animal_id').cumcount()
+    outcomes['stay_id'] = outcomes.animal_id + '_' + outcomes.n_previous_stays.astype(str)
+
+    # join the dataframes on stay_id
     
-    # join the dataframes
-    
-    df = pd.merge(intakes, outcomes, on='animal_id')
-    
+    df = pd.merge(intakes, outcomes, on='stay_id', suffixes=(None, '_y'))
+    df = df.drop(columns=[col for col in df.columns if '_y' in col])    
     
     # drop variables from the original outcomes table (since by definition, they're not drivers of outcome)
     
@@ -158,10 +166,26 @@ def aac_prep(intakes, outcomes):
     
     df['datetime_intake'] = pd.to_datetime(df.datetime_intake)
 
+    # add a column: found_in_austin (based on whether found location includes 'Austin (TX)')
+    df['found_in_austin'] = np.where(df.found_location.str.contains('Austin (TX)', regex=False), True, False)
+    # add a column: found_in_travis_cty (represents found outside city limits but inside Travis county)
+    df['found_in_travis'] = np.where(df.found_location.str.contains('Travis (TX)', regex=False), True, False)
+    # add a column: found_outside_jurisdiction
+    df['found_outside_jurisdiction'] = np.where(df.found_location == 'Outside Jurisdiction', True, False)
+    # add a column: found_other
+    df['found_other'] = np.where((~df.found_location.str.contains('Austin (TX)', regex=False))
+                                &(~df.found_location.str.contains('Travis (TX)', regex=False))
+                                &(~df.found_location.str.contains('Outside Jurisdiction', regex=False)), True, False)
+    # add a column: found_district (usually identifies city, sometimes a county, sometimes outside jurisdiction)
+    df['found_district'] = df.found_location.str.split().str[-2]
+
     # drop columns not used for modeling at this time
-    df = df.drop(columns=['datetime_intake', 'found_location', 'name', 'animal_id', 'breed_2', 'breed_3', 'color_2'])
-    # filter for only the most common outcome types
-    df = df[df.outcome_type.isin(['Adoption', 'Transfer', 'Return to Owner'])]
+    df = df.drop(columns=['datetime_intake', 'found_location', 'name', 'animal_id', 
+                          'breed_2', 'breed_3', 'color_2', 'found_district'])
+    # filter for only the most common outcome types (also exclude 'Return to Owner)
+    df = df[df.outcome_type.isin(['Adoption', 'Transfer'])]
+
+
     
     return df
 
@@ -173,16 +197,65 @@ def aac_get_dogs(df):
 def aac_prep_for_modeling(df):
 
     # columns to hot code
-    categorical_columns = ['fixed', 'breed_mixed', 'intake_type', 'intake_condition', 'animal_type', 'month_intake', 'sex', 'breed_1', 'color_1']
+    categorical_columns = ['fixed', 'breed_mixed', 'intake_type', 'intake_condition', 
+                            'animal_type', 'month_intake', 'sex', 'breed_1_reduced', 
+                            'color_1_reduced']
     # hot coding dummy variables
     for col in categorical_columns:
         dummy_df = pd.get_dummies(df[col],
-                                  prefix=df[col].name,
+                                  prefix=f'enc_{df[col].name}',
                                   drop_first=True,
                                   dummy_na=False)
         df = pd.concat([df, dummy_df], axis=1)
         # drop original column
         df = df.drop(columns=col)
+
     # turn age_intake timedelta into float
-    df['age_intake'] = df.age_intake / pd.Timedelta(days=1)
+    df['age_intake'] = df.age_intake / pd.Timedelta(days=1)    
+
     return df
+
+def train_validate_test_split(df, test_size=.2, validate_size=.3, random_state=random_state):
+    '''
+    This function takes in a dataframe, then splits that dataframe into three separate samples
+    called train, test, and validate, for use in machine learning modeling.
+
+    Three dataframes are returned in the following order: train, test, validate. 
+    
+    The function also prints the size of each sample.
+    '''
+    # split the dataframe into train and test
+    train, test = train_test_split(df, test_size=test_size, random_state=random_state)
+    # further split the train dataframe into train and validate
+    train, validate = train_test_split(train, test_size=validate_size, random_state=random_state)
+    # print the sample size of each resulting dataframe
+    print(f'train\t n = {train.shape[0]}')
+    print(f'validate n = {validate.shape[0]}')
+    print(f'test\t n = {test.shape[0]}')
+
+    return train, validate, test
+
+def scale_aac(train, validate, test, scaler_type=MinMaxScaler()):
+    # identify quantitative features to scale
+    quant_features = ['age_intake']
+    # establish empty dataframes for storing scaled dataset
+    train_scaled = pd.DataFrame(index=train.index)
+    validate_scaled = pd.DataFrame(index=validate.index)
+    test_scaled = pd.DataFrame(index=test.index)
+    # screate and fit the scaler
+    scaler = scaler_type.fit(train[quant_features])
+    # adding scaled features to scaled dataframes
+    train_scaled[quant_features] = scaler.transform(train[quant_features])
+    validate_scaled[quant_features] = scaler.transform(validate[quant_features])
+    test_scaled[quant_features] = scaler.transform(test[quant_features])
+    # add 'scaled' prefix to columns
+    for feature in quant_features:
+        train_scaled = train_scaled.rename(columns={feature: f'scaled_{feature}'})
+        validate_scaled = validate_scaled.rename(columns={feature: f'scaled_{feature}'})
+        test_scaled = test_scaled.rename(columns={feature: f'scaled_{feature}'})
+    # concat scaled feature columns to original train, validate, test df's
+    train = pd.concat([train, train_scaled], axis=1)
+    validate = pd.concat([validate, validate_scaled], axis=1)
+    test = pd.concat([test, test_scaled], axis=1)
+
+    return train, validate, test
