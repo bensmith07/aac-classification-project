@@ -1,7 +1,7 @@
 # Austin Animal Center Outcomes
 ## Which dogs will be adopted?
 
-<img src='sue.png' width=1000 height=250 align="center"/>
+<img src='sue.png' width=1000 height=210 align="center"/>
 
 ### Project Description
 
