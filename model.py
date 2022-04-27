@@ -5,7 +5,8 @@ from sklearn.feature_selection import RFE
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegressionfprint(model
+)
 random_state = 42
 
 def display_model_results(model_results):
@@ -28,9 +29,8 @@ def display_model_results(model_results):
 
 def get_best_model_results(model_results, metric_type='accuracy', n_models=3):
     '''
-    This function takes in the model_results dataframe created in the Modeling stage of the 
-    TelCo Churn analysis project. This is a dataframe in tidy data format containing the following
-    data for each model created in the project:
+    This function takes in the model_results dataframe. This is a dataframe in tidy 
+    data format containing the following data for each model created in the project:
     - model number
     - metric type (accuracy, precision, recall, f1 score)
     - sample type (train, validate)
@@ -81,8 +81,27 @@ def rfe_decision_tree(train,
     x_train_rfe = train[all_features]
     y_train_rfe = train[target]
 
-    for n_features in range(2,6):
-        for max_depth in range(1,6):
+    # establish hyperparameter ranges
+    min_n_features = 2
+    max_n_features = 12
+
+    min_max_depth = 3
+    max_max_depth = 10
+
+    # establish loops based on hyperparameter ranges
+    count = 1
+    for n_features in range(min_n_features, max_n_features + 1):
+        for max_depth in range(min_max_depth, max_max_depth + 1):
+
+            # display loop progress to console
+            total = ((len(range(min_n_features, max_n_features + 1))) 
+                    * (len(range(min_max_depth, max_max_depth + 1)))) 
+            print(f'\rGenerating {count} of {total} models.     ')
+            count += 1
+
+            # cache completed model info / model results
+            model_info.to_csv('model_info.csv')
+            model_results.to_csv('model_results.csv')
 
             #####################################
             ### Recursive Feature Elimination ###
@@ -103,8 +122,6 @@ def rfe_decision_tree(train,
             ##################
             ### Model Info ###
             ##################
-
-            print(model_number)
 
             # create a new model number by adding 1 to the previous model number
             model_number += 1
@@ -231,9 +248,32 @@ def rfe_random_forest(train,
     x_train_rfe = train[all_features]
     y_train_rfe = train[target]
 
-    for n_features in range(2, 6):
-        for max_depth in range (2, 6):
-            for min_samples_leaf in range(2, 3):
+    # establish ranges for hyperparameters
+    min_n_features = 2
+    max_n_features = 12
+    
+    min_max_depth = 2
+    max_max_depth = 10
+
+    min_min_samples_leaf = 2
+    max_min_samples_leaf = 2
+
+    # establish loops based on hyperparameter ranges
+    count = 1
+    for n_features in range(2, max_n_features + 1):
+        for max_depth in range (2, max_max_depth + 1):
+            for min_samples_leaf in range(2, max_min_samples_leaf + 1):
+
+                # display loop progress to console
+                total = ((len(range(min_n_features, max_n_features + 1))) 
+                       * (len(range(min_max_depth, max_max_depth + 1)) 
+                       * (len(range(min_min_samples_leaf, max_min_samples_leaf + 1)))))
+                print(f'\rGenerating {count} of {total} models.     ')
+                count += 1
+
+                # cache completed model info / model results
+                model_info.to_csv('model_info.csv')
+                model_results.to_csv('model_results.csv')
                 
                 #####################################
                 ### Recursive Feature Elimination ###
@@ -256,8 +296,6 @@ def rfe_random_forest(train,
                 ##################
                 ### Model Info ###
                 ##################
-
-                print(model_number)
 
                 # create a new model number by adding 1 to the previous model number
                 model_number += 1
@@ -385,129 +423,247 @@ def rfe_log_regression(train,
     x_train_rfe = train[all_features]
     y_train_rfe = train[target]
 
-    for n_features in range(2, 6):
-        for c_value in [.001, .01, .1, 1, 10, 100, 1000]:
+    # establish hyperparameter ranges
+    min_n_features = 2
+    max_n_features = 12
+
+    c_values = [.001, .01, .1, 1, 10, 100, 1000]
+
+    # establish loops based on hyperparameter ranges
+    count = 1
+    for n_features in range(min_n_features, max_n_features + 1):
+        for c_value in c_values:
+
+            # print loop progress to console
+            total = (len(range(min_n_features, max_n_features + 1)) * len(c_values))
+            print(f'\rGenerating {count} of {total} models.          ')
+            count += 1
+
+            # cache completed model info / model results
+            model_info.to_csv('model_info.csv')
+            model_results.to_csv('model_results.csv')
+        
+            #####################################
+            ### Recursive Feature Elimination ###
+            #####################################
+
+            # establish a logistic regression classifier
+            clf = LogisticRegression(C=c_value)
+
+            # create the rfe object
+            rfe = RFE(clf, n_features_to_select=n_features)
+
+            # fit the data using RFE
+            rfe.fit(x_train_rfe, y_train_rfe)
+
+            # get list of the column names for the selected features
+            features = x_train_rfe.iloc[:,rfe.support_].columns.tolist()
             
-                #####################################
-                ### Recursive Feature Elimination ###
-                #####################################
+            ##################
+            ### Model Info ###
+            ##################
 
-                # establish a logistic regression classifier
-                clf = LogisticRegression(C=c_value)
+            # create a new model number by adding 1 to the previous model number
+            model_number += 1
+            # establish the model type
+            model_type = 'logistic regression'
 
-                # create the rfe object
-                rfe = RFE(clf, n_features_to_select=n_features)
+            # store info about the model
 
-                # fit the data using RFE
-                rfe.fit(x_train_rfe, y_train_rfe)
+            # create a dictionary containing the features and hyperparamters used in this model instance
+            dct = {'model_number': model_number,
+                    'model_type': model_type,
+                    'features': features,
+                    'c_value': c_value}
+            # append that dictionary to the model_info dataframe
+            model_info = model_info.append(dct, ignore_index=True)
+            
+            ################
+            ### Modeling ###
+            ################
 
-                # get list of the column names for the selected features
-                features = x_train_rfe.iloc[:,rfe.support_].columns.tolist()
+            # separate each sample into x (features) and y (target)
+            x_train = train[features]
+            y_train = train[target]
+
+            x_validate = validate[features]
+            y_validate = validate[target]
+            
+            # fit the classifier to the training data
+            clf = clf.fit(x_train, y_train)
+            
+            #####################
+            ### Model Results ###
+            #####################
+
+            ####### train #######
+
+            # create prediction results for the model's performance on the train sample
+            y_pred = clf.predict(x_train)
+            sample_type = 'train'
+
+            # get metrics
+
+            # create dictionaries for each metric type for the train sample and append those dictionaries to the model_results dataframe
+            dct = {'model_number': model_number, 
+                    'sample_type': sample_type, 
+                    'metric_type': 'accuracy',
+                    'score': sk.metrics.accuracy_score(y_train, y_pred)}
+            model_results = model_results.append(dct, ignore_index=True)
+
+            dct = {'model_number': model_number, 
+                    'sample_type': sample_type, 
+                    'metric_type': 'precision',
+                    'score': sk.metrics.precision_score(y_train, y_pred, pos_label=positive)}
+            model_results = model_results.append(dct, ignore_index=True)
+
+            dct = {'model_number': model_number, 
+                    'sample_type': sample_type, 
+                    'metric_type': 'recall',
+                    'score': sk.metrics.recall_score(y_train, y_pred, pos_label=positive)}
+            model_results = model_results.append(dct, ignore_index=True)
+
+            dct = {'model_number': model_number, 
+                    'sample_type': sample_type, 
+                    'metric_type': 'f1_score',
+                    'score': sk.metrics.f1_score(y_train, y_pred, pos_label=positive)}
+            model_results = model_results.append(dct, ignore_index=True)
+
+
+            ####### validate #######
+
+            # create prediction results for the model's performance on the validate sample
+            y_pred = clf.predict(x_validate)
+            sample_type = 'validate'
+
+            # get metrics
+
+            # create dictionaries for each metric type for the validate sample and append those dictionaries to the model_results dataframe
+            dct = {'model_number': model_number, 
+                    'sample_type': sample_type, 
+                    'metric_type': 'f1_score',
+                    'score': sk.metrics.f1_score(y_validate, y_pred, pos_label=positive)}
+            model_results = model_results.append(dct, ignore_index=True)
+
+            dct = {'model_number': model_number, 
+                    'sample_type': sample_type, 
+                    'metric_type': 'accuracy',
+                    'score': sk.metrics.accuracy_score(y_validate, y_pred)}
+            model_results = model_results.append(dct, ignore_index=True)
+
+            dct = {'model_number': model_number, 
+                    'sample_type': sample_type, 
+                    'metric_type': 'precision',
+                    'score': sk.metrics.precision_score(y_validate, y_pred, pos_label=positive)}
+            model_results = model_results.append(dct, ignore_index=True)
+
+            dct = {'model_number': model_number, 
+                    'sample_type': sample_type, 
+                    'metric_type': 'recall',
+                    'score': sk.metrics.recall_score(y_validate, y_pred, pos_label=positive)}
+            model_results = model_results.append(dct, ignore_index=True) 
                 
-                ##################
-                ### Model Info ###
-                ##################
+    return model_number, model_info, model_results
 
-                print(model_number)
+def run_baseline(train,
+                 validate,
+                 target,
+                 positive,
+                 model_number,
+                 model_info,
+                 model_results):
+    '''
+    This function takes in the train and validate samples as dataframes, the target variable label, the positive condition label,
+    an initialized model_number variable, as well as model_info and model_results dataframes dataframes that will be used for 
+    storing information about the models. It then performs the operations necessary for making baseline predictions
+    on our dataset, and stores information about our baseline model in the model_info and model_results dataframes. 
+    The model_number, model_info, and model_results variables are returned (in that order). 
+    '''
 
-                # create a new model number by adding 1 to the previous model number
-                model_number += 1
-                # establish the model type
-                model_type = 'logistic regression'
+    # separate each sample into x (features) and y (target)
+    x_train = train.drop(columns=target)
+    y_train = train[target]
 
-                # store info about the model
-
-                # create a dictionary containing the features and hyperparamters used in this model instance
-                dct = {'model_number': model_number,
-                       'model_type': model_type,
-                       'features': features,
-                       'c_value': c_value}
-                # append that dictionary to the model_info dataframe
-                model_info = model_info.append(dct, ignore_index=True)
-                
-                ################
-                ### Modeling ###
-                ################
-
-                # separate each sample into x (features) and y (target)
-                x_train = train[features]
-                y_train = train[target]
-
-                x_validate = validate[features]
-                y_validate = validate[target]
-                
-                # fit the classifier to the training data
-                clf = clf.fit(x_train, y_train)
-                
-                #####################
-                ### Model Results ###
-                #####################
-
-                ####### train #######
-
-                # create prediction results for the model's performance on the train sample
-                y_pred = clf.predict(x_train)
-                sample_type = 'train'
-
-                # get metrics
-
-                # create dictionaries for each metric type for the train sample and append those dictionaries to the model_results dataframe
-                dct = {'model_number': model_number, 
-                       'sample_type': sample_type, 
-                       'metric_type': 'accuracy',
-                       'score': sk.metrics.accuracy_score(y_train, y_pred)}
-                model_results = model_results.append(dct, ignore_index=True)
-
-                dct = {'model_number': model_number, 
-                       'sample_type': sample_type, 
-                       'metric_type': 'precision',
-                       'score': sk.metrics.precision_score(y_train, y_pred, pos_label=positive)}
-                model_results = model_results.append(dct, ignore_index=True)
-
-                dct = {'model_number': model_number, 
-                       'sample_type': sample_type, 
-                       'metric_type': 'recall',
-                       'score': sk.metrics.recall_score(y_train, y_pred, pos_label=positive)}
-                model_results = model_results.append(dct, ignore_index=True)
-
-                dct = {'model_number': model_number, 
-                       'sample_type': sample_type, 
-                       'metric_type': 'f1_score',
-                       'score': sk.metrics.f1_score(y_train, y_pred, pos_label=positive)}
-                model_results = model_results.append(dct, ignore_index=True)
+    x_validate = validate.drop(columns=target)
+    y_validate = validate[target]
 
 
-                ####### validate #######
+    # store baseline metrics
 
-                # create prediction results for the model's performance on the validate sample
-                y_pred = clf.predict(x_validate)
-                sample_type = 'validate'
+    # identify model number
+    model_number = 'baseline'
+    #identify model type
+    model_type = 'baseline'
 
-                # get metrics
+    # store info about the model
 
-                # create dictionaries for each metric type for the validate sample and append those dictionaries to the model_results dataframe
-                dct = {'model_number': model_number, 
-                       'sample_type': sample_type, 
-                       'metric_type': 'f1_score',
-                       'score': sk.metrics.f1_score(y_validate, y_pred, pos_label=positive)}
-                model_results = model_results.append(dct, ignore_index=True)
+    # create a dictionary containing model number and model type
+    dct = {'model_number': model_number,
+           'model_type': model_type}
+    # append that dictionary to the model_info dataframe
+    model_info = model_info.append(dct, ignore_index=True)
 
-                dct = {'model_number': model_number, 
-                       'sample_type': sample_type, 
-                       'metric_type': 'accuracy',
-                       'score': sk.metrics.accuracy_score(y_validate, y_pred)}
-                model_results = model_results.append(dct, ignore_index=True)
+    # establish baseline predictions for train sample
+    y_pred = pd.Series([train[target].mode()[0]]).repeat(len(train))
 
-                dct = {'model_number': model_number, 
-                       'sample_type': sample_type, 
-                       'metric_type': 'precision',
-                       'score': sk.metrics.precision_score(y_validate, y_pred, pos_label=positive)}
-                model_results = model_results.append(dct, ignore_index=True)
+    # get metrics
 
-                dct = {'model_number': model_number, 
-                       'sample_type': sample_type, 
-                       'metric_type': 'recall',
-                       'score': sk.metrics.recall_score(y_validate, y_pred, pos_label=positive)}
-                model_results = model_results.append(dct, ignore_index=True) 
-                
+    # create dictionaries for each metric type for the train sample and append those dictionaries to the model_results dataframe
+    dct = {'model_number': model_number, 
+           'sample_type': 'train', 
+           'metric_type': 'accuracy',
+           'score': sk.metrics.accuracy_score(y_train, y_pred)}
+    model_results = model_results.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': 'train', 
+           'metric_type': 'precision',
+           'score': sk.metrics.precision_score(y_train, y_pred, pos_label=positive)}
+    model_results = model_results.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': 'train', 
+           'metric_type': 'recall',
+           'score': sk.metrics.recall_score(y_train, y_pred, pos_label=positive)}
+    model_results = model_results.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': 'train', 
+           'metric_type': 'f1_score',
+           'score': sk.metrics.f1_score(y_train, y_pred, pos_label=positive)}
+    model_results = model_results.append(dct, ignore_index=True)
+
+    # establish baseline predictions for validate sample
+    y_pred = baseline_pred = pd.Series([train[target].mode()[0]]).repeat(len(validate))
+
+    # get metrics
+
+    # create dictionaries for each metric type for the validate sample and append those dictionaries to the model_results dataframe
+    dct = {'model_number': model_number, 
+           'sample_type': 'validate', 
+           'metric_type': 'f1_score',
+           'score': sk.metrics.f1_score(y_validate, y_pred, pos_label=positive)}
+    model_results = model_results.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': 'validate', 
+           'metric_type': 'accuracy',
+           'score': sk.metrics.accuracy_score(y_validate, y_pred)}
+    model_results = model_results.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': 'validate', 
+           'metric_type': 'precision',
+           'score': sk.metrics.precision_score(y_validate, y_pred, pos_label=positive)}
+    model_results = model_results.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': 'validate', 
+           'metric_type': 'recall',
+           'score': sk.metrics.recall_score(y_validate, y_pred, pos_label=positive)}
+    model_results = model_results.append(dct, ignore_index=True)
+
+    # set the model number to from 'baseline' to 0 
+    model_number = 0
+    
     return model_number, model_info, model_results
