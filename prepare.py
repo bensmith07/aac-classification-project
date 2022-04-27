@@ -179,6 +179,11 @@ def aac_prep(intakes, outcomes):
     # add a column: found_district (usually identifies city, sometimes a county, sometimes outside jurisdiction)
     df['found_district'] = df.found_location.str.split().str[-2]
 
+    # add a column: is_pitbull
+    df['is_pitbull'] = np.where(df.breed_1.str.contains('Pit Bull'), True, False)
+    # add a column: is_black
+    df['is_black'] = np.where(df.breed_1.str.contains('Black'), True, False)
+
     # add a column: akc_breed_group
     # map each breed in breed_1 to the corresponding group as recognized by the akc 
     # source: https://www.akc.org/public-education/resources/general-tips-information/dog-breeds-sorted-groups/
@@ -392,15 +397,14 @@ def aac_prep(intakes, outcomes):
 
     df['akc_breed_group'] = df.breed_1.map(akc_breed_group_dct)
 
+    # add a column: adopted
+    df['adopted'] = np.where((df.outcome_type == 'Adoption'), True, False)
+
     # drop columns not used for modeling at this time
     df = df.drop(columns=['datetime_intake', 'found_location', 'name', 'animal_id', 
-                          'breed_2', 'breed_3', 'color_2', 'found_district'])
+                          'breed_2', 'breed_3', 'color_2', 'found_district', 'adopted'])
     # filter for only the most common outcome types (also exclude 'Return to Owner)
     df = df[df.outcome_type.isin(['Adoption', 'Transfer'])]
-
-
-
-
     
     return df
 
@@ -415,7 +419,8 @@ def aac_prep_for_modeling(df):
     categorical_columns = ['fixed', 'breed_mixed', 'intake_type', 'intake_condition', 
                             'animal_type', 'month_intake', 'sex', 'breed_1_reduced', 
                             'color_1_reduced', 'akc_breed_group', 'found_in_austin', 
-                            'found_in_travis', 'found_outside_jurisdiction', 'found_other']
+                            'found_in_travis', 'found_outside_jurisdiction', 'found_other', 
+                            'is_pitbull', 'is_black']
 
     # hot coding dummy variables
     for col in categorical_columns:
