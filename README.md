@@ -1,6 +1,9 @@
 # Austin Animal Center Outcomes
 ## Which dogs will be adopted?
 
+<img src='sue.png' width=1000 height=125
+ align="center"/>
+
 ### Project Description
 
 This project uses machine learning on data from Austin Animal Center (AAC) in an attempt to predict which dogs will be adopted and which will be transferred. 
@@ -101,6 +104,7 @@ From AAC:
     - drops columns not used for modeling in this analysis
     - filters rows to focus on only the most common outcome types: 'Adoption' and 'Transfer'
 - Then used an additional function to filter the dataset for only the dogs (using animal_type == 'Dog')
+- Missing values: There were no missing values in the original dataset, though my feature engineering process did create some columns that contained significant numbers of missing values. These columns were ultimately dropped and not used in this analysis. 
 3. Exploration
 - Split the data into train, validate, and test samples
 - Conducted an initial exploration of the train data using some cursory visualization techniques to look at the distributions among various categorical variables, as well as the interaction of those categorical variables with the target. 
@@ -114,7 +118,7 @@ From AAC:
 
 ### Model Performance
 
-The top performing model was a Random Forest model using a combination of 11 features (listed below), with a max-depth of 10. It performed with 70.5% accuracy on the test sample, which is a 1.7 point improvement over the baseline accuracy of 68.8%. This is only a modest increase, but shows there is some predictive power in the available data and encourages further exploration and analysis. 
+The top performing model was a Random Forest model using a combination of 11 features (listed below), with a max-depth of 10. It performed with 70.6% accuracy on the test sample, which is a 1.8 point improvement over the baseline accuracy of 68.8%. This is only a modest increase, but shows there is some predictive power in the available data and encourages further exploration and analysis. 
 
 ### Key Findings
 
