@@ -29,9 +29,9 @@ AAC publishes two separate dataset: "Intakes" and "Outcomes". These datasets wer
 
 From AAC: 
         
-        "Intakes represent the status of animals as they arrive at the Animal Center. All animals receive a unique Animal ID during intake."
+"Intakes represent the status of animals as they arrive at the Animal Center. All animals receive a unique Animal ID during intake."
 
-        "Outcomes represent the status of animals as they leave the Animal Center... Annually over 90% of animals entering the center, are adopted, transferred to rescue or returned to their owners. The Outcomes data set reflects that Austin, TX. is the largest "No Kill" city in the country.
+"Outcomes represent the status of animals as they leave the Animal Center... Annually over 90% of animals entering the center, are adopted, transferred to rescue or returned to their owners. The Outcomes data set reflects that Austin, TX. is the largest "No Kill" city in the country.
 
 (Note: no additional feature descriptions were included in the data source. Descriptions below are based on my own interpretation of the data.)
 
