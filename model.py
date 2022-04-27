@@ -5,8 +5,7 @@ from sklearn.feature_selection import RFE
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegressionfprint(model
-)
+from sklearn.linear_model import LogisticRegression
 random_state = 42
 
 def display_model_results(model_results):
@@ -667,3 +666,97 @@ def run_baseline(train,
     model_number = 0
     
     return model_number, model_info, model_results
+
+def print_model_features(model_numbers, model_info):
+    for model_num in model_numbers:
+        print(f'Model #{model_num} Features:')
+        print('-' * 20)
+        for feature in model_info[model_info.model_number == model_num].features.values[0]:
+            print(feature)
+        print()
+
+# recreate the model using the same features and hyperparameters
+def test_model_178(train,
+                  test, 
+                  target, 
+                  positive):
+    
+    model_results_178 = pd.DataFrame()
+    model_number = 178
+    
+    features = ['enc_fixed_unknown',
+                'enc_breed_mixed_True',
+                'enc_intake_type_Public Assist',
+                'enc_intake_condition_Normal',
+                'enc_intake_condition_Sick',
+                'enc_month_intake_September',
+                'enc_sex_unknown',
+                'enc_breed_1_reduced_Other',
+                'enc_akc_breed_group_Toy',
+                'enc_found_in_austin_True',
+                'scaled_age_intake']
+
+    max_depth = 10
+    min_samples_leaf = 2
+    
+    # establish a random forest classifier
+    clf = RandomForestClassifier(max_depth=max_depth, 
+                                 min_samples_leaf=min_samples_leaf,
+                                 random_state=random_state)
+
+    # separate each sample into x (features) and y (target)
+    x_train = train[features]
+    y_train = train[target]
+
+    x_test = test[features]
+    y_test = test[target]
+
+
+    # create the classifer
+
+    # establish a random forest classifier 
+    clf = RandomForestClassifier(max_depth=max_depth, 
+                                 min_samples_leaf=min_samples_leaf,
+                                 random_state=random_state)
+
+    # fit the classifier to the training data
+    clf = clf.fit(x_train, y_train)
+
+    #####################
+    ### Model Results ###
+    #####################
+
+    ####### train #######
+
+    # create prediction results for the model's performance on the test sample
+    y_pred = clf.predict(x_test)
+    sample_type = 'test'
+
+    # get metrics
+
+    # create dictionaries for each metric type for the test sample and append those dictionaries to the model_results dataframe
+    dct = {'model_number': model_number, 
+           'sample_type': sample_type, 
+           'metric_type': 'accuracy',
+           'score': sk.metrics.accuracy_score(y_test, y_pred)}
+    model_results_178 = model_results_178.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': sample_type, 
+           'metric_type': 'precision',
+           'score': sk.metrics.precision_score(y_test, y_pred, pos_label=positive)}
+    model_results_178 = model_results_178.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': sample_type, 
+           'metric_type': 'recall',
+           'score': sk.metrics.recall_score(y_test, y_pred, pos_label=positive)}
+    model_results_178 = model_results_178.append(dct, ignore_index=True)
+
+    dct = {'model_number': model_number, 
+           'sample_type': sample_type, 
+           'metric_type': 'f1_score',
+           'score': sk.metrics.f1_score(y_test, y_pred, pos_label=positive)}
+    model_results_178 = model_results_178.append(dct, ignore_index=True)
+
+    return model_results_178

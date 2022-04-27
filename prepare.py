@@ -126,7 +126,7 @@ def aac_prep(intakes, outcomes):
     df = df.drop(columns='breed')
     
     
-    # split the color descriptino into multiple columns when there is more than one listed
+    # split the color description into multiple columns when there is more than one listed
     # then drop the original color column
     
     def color_split_1(color):
@@ -397,12 +397,16 @@ def aac_prep(intakes, outcomes):
 
     df['akc_breed_group'] = df.breed_1.map(akc_breed_group_dct)
 
-    # add a column: adopted
-    df['adopted'] = np.where((df.outcome_type == 'Adoption'), True, False)
+    # Define all but the top 10 breeds as "other" to reduce dimensionality¶
+    top_10_breeds = list(df.breed_1.value_counts().head(10).index)
+    df['breed_1_reduced'] = np.where(df.breed_1.isin(top_10_breeds), df.breed_1, 'Other')   
+    # Do the same with colors¶
+    top_10_colors = list(df.color_1.value_counts().head(10).index)
+    df['color_1_reduced'] = np.where(df.color_1.isin(top_10_colors), df.color_1, 'Other')
 
     # drop columns not used for modeling at this time
     df = df.drop(columns=['datetime_intake', 'found_location', 'name', 'animal_id', 
-                          'breed_2', 'breed_3', 'color_2', 'found_district', 'adopted'])
+                          'breed_2', 'breed_3', 'color_2', 'found_district'])
     # filter for only the most common outcome types (also exclude 'Return to Owner)
     df = df[df.outcome_type.isin(['Adoption', 'Transfer'])]
     
